@@ -1,0 +1,39 @@
+--- libiconv/libcharset/lib/localcharset.c.orig	2016-12-02 14:55:29.000000000 +0200
++++ libiconv/libcharset/lib/localcharset.c	2017-03-12 23:48:39.113259171 +0200
+@@ -46,7 +46,7 @@
+ 
+ #if !defined WINDOWS_NATIVE
+ # include <unistd.h>
+-# if HAVE_LANGINFO_CODESET
++# if HAVE_LANGINFO_CODESET && !(defined __ANDROID__)
+ #  include <langinfo.h>
+ # else
+ #  if 0 /* see comment below */
+@@ -128,7 +128,7 @@
+   cp = charset_aliases;
+   if (cp == NULL)
+     {
+-#if !(defined DARWIN7 || defined VMS || defined WINDOWS_NATIVE || defined __CYGWIN__ || defined OS2)
++#if !(defined DARWIN7 || defined VMS || defined WINDOWS_NATIVE || defined __CYGWIN__ || defined OS2 || defined __ANDROID__)
+       const char *dir;
+       const char *base = "charset.alias";
+       char *file_name;
+@@ -342,6 +342,9 @@
+            "CP54936" "\0" "GB18030" "\0"
+            "CP65001" "\0" "UTF-8" "\0";
+ # endif
++# if defined __ANDROID__
++      cp = "*" "\0" "UTF-8" "\0";
++# endif
+ # if defined OS2
+       /* To avoid the troubles of installing a separate file in the same
+          directory as the DLL and of retrieving the DLL's directory at
+@@ -395,7 +398,7 @@
+   const char *codeset;
+   const char *aliases;
+ 
+-#if !(defined WINDOWS_NATIVE || defined OS2)
++#if !(defined WINDOWS_NATIVE || defined OS2 || defined __ANDROID__)
+ 
+ # if HAVE_LANGINFO_CODESET
+ 
