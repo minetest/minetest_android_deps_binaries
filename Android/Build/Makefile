@@ -363,7 +363,6 @@ iconv_download :
 		rm libiconv-${ICONV_VERSION}.tar.gz;							\
 		mv libiconv-${ICONV_VERSION} libiconv;							\
 		cd libiconv;													\
-		patch -p1 < ${ANDR_ROOT}/patches/libiconv_android.patch;		\
 		export TOOLCHAIN=/tmp/ndk-${TARGET_HOST}-iconv;					\
 		${ANDROID_NDK}/build/tools/make_standalone_toolchain.py			\
 			--arch ${TARGET_ARCH}										\

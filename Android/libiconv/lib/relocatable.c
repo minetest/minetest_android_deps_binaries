@@ -24,7 +24,7 @@
 #endif
 
 #define _GL_USE_STDLIB_ALLOC 1
-#include "config.h"
+#include <config.h>
 
 /* Specification.  */
 #include "relocatable.h"
