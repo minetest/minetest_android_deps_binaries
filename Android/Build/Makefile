@@ -85,7 +85,7 @@ IRRLICHT_DIR = $(ANDR_ROOT)/deps/irrlicht
 IRRLICHT_LIB = $(IRRLICHT_DIR)/lib/Android/libIrrlicht.a
 IRRLICHT_TIMESTAMP = $(IRRLICHT_DIR)/timestamp
 IRRLICHT_TIMESTAMP_INT = $(ANDR_ROOT)/deps/irrlicht_timestamp
-IRRLICHT_URL_HTTP = https://github.com/zaki/irrlicht/archive/$(IRRLICHT_BRANCH).zip
+IRRLICHT_URL_HTTP = https://github.com/MoNTE48/Irrlicht/archive/$(IRRLICHT_BRANCH).zip
 
 CURL_VERSION = 7.66.0
 CURL_DIR = $(ANDR_ROOT)/deps/curl
@@ -383,7 +383,7 @@ irrlicht_download :
 		wget ${IRRLICHT_URL_HTTP} || exit 1;							\
 		unzip ${IRRLICHT_BRANCH}.zip || exit 1;							\
 		rm ${IRRLICHT_BRANCH}.zip;										\
-		mv irrlicht-${IRRLICHT_BRANCH} irrlicht;						\
+		mv Irrlicht-${IRRLICHT_BRANCH} irrlicht;						\
 		cd irrlicht;													\
 		mkdir -p lib/Android;											\
 	fi
