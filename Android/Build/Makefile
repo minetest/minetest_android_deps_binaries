@@ -336,11 +336,12 @@ $(FREETYPE_LIB) : $(FREETYPE_TIMESTAMP)
 		--install-dir=$${TOOLCHAIN};									\
 	export PATH="$${TOOLCHAIN}/bin:$${PATH}";							\
 	export TARGET_OS=OS_ANDROID_CROSSCOMPILE;							\
-	export CPPFLAGS="$${CPPFLAGS} ${TARGET_CXXFLAGS_ADDON}";			\
+	export CPPFLAGS="$${CPPFLAGS} ${TARGET_CXXFLAGS_ADDON} -fPIC";			\
 	export CFLAGS="$${CFLAGS} ${TARGET_CFLAGS_ADDON}";					\
-	CC=${CROSS_CC} ./configure											\
-		--enable-static --disable-shared --host=${TARGET_TOOLCHAIN}		\
-		--prefix=${TOOLCHAIN} --with-png=no --with-harfbuzz=no|| exit 1;\
+	CC=${CROSS_CC} ./configure --host=${TARGET_TOOLCHAIN}				\
+		--enable-static --disable-shared --with-zlib=yes				\
+		--with-bzip2=no --with-png=no --with-harfbuzz=no				\
+		--prefix=${TOOLCHAIN} || exit 1;								\
 	CC=${CROSS_CC} ANDROID_DEV=/tmp/ndk-${TARGET_HOST}-freetype			\
 		$(MAKE) || exit 1;												\
 	touch ${FREETYPE_TIMESTAMP};										\
