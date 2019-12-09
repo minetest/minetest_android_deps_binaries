@@ -14,7 +14,7 @@
 #CROSS_CXX = clang++
 #HOST_CC = "gcc -m32" # required for LuaJIT
 #COMPILER_VERSION = clang
-#APP_STL = c++_shared
+#APP_STL = c++_static
 #APP_STL_LIB = libc++
 
 ######################################################################################
@@ -33,7 +33,7 @@ CROSS_CC = clang
 CROSS_CXX = clang++
 HOST_CC = "gcc -m64" # required for LuaJIT
 COMPILER_VERSION = clang
-APP_STL = c++_shared
+APP_STL = c++_static
 APP_STL_LIB = libc++
 
 ######################################################################################
@@ -52,7 +52,7 @@ APP_STL_LIB = libc++
 #CROSS_CXX = clang++
 #HOST_CC = "gcc -m32" # required for LuaJIT
 #COMPILER_VERSION = clang
-#APP_STL = c++_shared
+#APP_STL = c++_static
 #APP_STL_LIB = libc++
 
 ######################################################################################
@@ -68,6 +68,7 @@ LEVELDB_TIMESTAMP_INT = $(ANDR_ROOT)/deps/leveldb_timestamp
 LEVELDB_URL = https://github.com/google/leveldb/archive/v$(LEVELDB_VERSION).zip
 
 OPENAL_VERSION = v1.19
+#OPENAL_VERSION = c0cf323e1d56ce605e90927324d2fdafcfbb564a # Release 1.20.0
 OPENAL_DIR = $(ANDR_ROOT)/deps/openal-soft
 OPENAL_LIB = $(OPENAL_DIR)/libopenal.a
 OPENAL_TIMESTAMP = $(OPENAL_DIR)/timestamp
@@ -87,7 +88,7 @@ IRRLICHT_TIMESTAMP = $(IRRLICHT_DIR)/timestamp
 IRRLICHT_TIMESTAMP_INT = $(ANDR_ROOT)/deps/irrlicht_timestamp
 IRRLICHT_URL_HTTP = https://github.com/MoNTE48/Irrlicht/archive/$(IRRLICHT_BRANCH).zip
 
-CURL_VERSION = 7.66.0
+CURL_VERSION = 7.67.0
 CURL_DIR = $(ANDR_ROOT)/deps/curl
 CURL_LIB = $(CURL_DIR)/lib/.libs/libcurl.a
 CURL_TIMESTAMP = $(CURL_DIR)/timestamp
@@ -105,12 +106,12 @@ ICONV_VERSION = 1.16
 ICONV_DIR = $(ANDR_ROOT)/deps/libiconv
 ICONV_URL_HTTP = https://ftp.gnu.org/pub/gnu/libiconv/libiconv-$(ICONV_VERSION).tar.gz
 
-LUAJIT_GIT_BRANCH = v2.1
+LUAJIT_VERSION = 2.1.2
 LUAJIT_DIR = $(ANDR_ROOT)/deps/luajit
 LUAJIT_LIB = $(LUAJIT_DIR)src/libluajit.a
 LUAJIT_TIMESTAMP = $(LUAJIT_DIR)/timestamp
 LUAJIT_TIMESTAMP_INT = $(ANDR_ROOT)/deps/luajit_timestamp
-LUAJIT_URL_GIT = https://github.com/LuaJIT/LuaJIT.git
+LUAJIT_URL_HTTP = https://github.com/moonjit/moonjit/archive/${LUAJIT_VERSION}.zip
 
 GMP_VERSION = 6.1.2
 GMP_DIR = $(ANDR_ROOT)/deps/gmp
@@ -149,7 +150,9 @@ openal_download :
 		cd ${ANDR_ROOT}/deps;											\
 		git clone --branch ${OPENAL_VERSION} ${OPENAL_URL_GIT}			\
 			openal-soft || exit 1;										\
+#		git clone ${OPENAL_URL_GIT} || exit 1;							\
 		cd ${OPENAL_DIR};												\
+#		git reset --hard ${OPENAL_VERSION};								\
 		sed '/CMAKE_FIND_ROOT_PATH / s/^/#/' -i XCompile-Android.txt;	\
 		sed '/CMAKE_C_COMPILER/ s/-gcc"/-clang"/' -i XCompile-Android.txt;\
 		sed '/CMAKE_CXX_COMPILER/ s/-g++"/-clang++"/' -i XCompile-Android.txt;\
@@ -486,7 +489,8 @@ $(CURL_LIB) : $(CURL_TIMESTAMP)
 		--disable-unix-sockets --without-libidn --without-librtmp		\
 		--without-ssl --disable-sspi --disable-ldap --disable-ldaps		\
 		--disable-rtsp --disable-dict --disable-telnet --disable-tftp	\
-		--disable-pop3 --disable-imap --disable-smtp --disable-gopher;	\
+		--disable-pop3 --disable-imap --disable-smtp --disable-gopher	\
+		--disable-libcurl-option;										\
 	$(MAKE) -s || exit 1;												\
 	touch ${CURL_TIMESTAMP};											\
 	touch ${CURL_TIMESTAMP_INT};										\
@@ -509,8 +513,10 @@ luajit_download :
 		echo "luajit sources missing, downloading...";					\
 		mkdir -p ${ANDR_ROOT}/deps;										\
 		cd ${ANDR_ROOT}/deps;											\
-		git clone --depth 1 --branch ${LUAJIT_GIT_BRANCH}				\
-			${LUAJIT_URL_GIT} luajit || exit 1;							\
+		wget ${LUAJIT_URL_HTTP} || exit 1;								\
+		unzip ${LUAJIT_VERSION}.zip || exit 1;							\
+		rm ${LUAJIT_VERSION}.zip;										\
+		mv moonjit-${LUAJIT_VERSION} luajit;							\
 	fi
 
 luajit : $(LUAJIT_LIB)
@@ -536,7 +542,7 @@ $(LUAJIT_LIB) : $(LUAJIT_TIMESTAMP)
 		--install-dir=$${TOOLCHAIN};									\
 	export PATH="$${TOOLCHAIN}/bin:$${PATH}";							\
 	export TARGET_FLAGS="${TARGET_CFLAGS_ADDON} -fno-fast-math";		\
-	$(MAKE) CROSS=${CROSS_PREFIX}-TARGET_CC=${CROSS_PREFIX}-clang		\
+	$(MAKE) amalg CROSS=${CROSS_PREFIX}- TARGET_CC=${CROSS_PREFIX}-clang		\
 	XCFLAGS="-DLUAJIT_DISABLE_FFI" HOST_CC=${HOST_CC} BUILDMODE=static;	\
 	touch ${LUAJIT_TIMESTAMP};											\
 	touch ${LUAJIT_TIMESTAMP_INT};										\
