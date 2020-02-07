@@ -25,3 +25,7 @@
 *.out
 *.app
 .DS_Store
+Android/Build/deps/*
+!Android/Build/Makefile
+Makefile*
+Android/Build/local.properties

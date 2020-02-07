@@ -67,8 +67,7 @@ LEVELDB_TIMESTAMP = $(LEVELDB_DIR)/timestamp
 LEVELDB_TIMESTAMP_INT = $(ANDR_ROOT)/deps/leveldb_timestamp
 LEVELDB_URL = https://github.com/google/leveldb/archive/v$(LEVELDB_VERSION).zip
 
-OPENAL_VERSION = v1.19
-#OPENAL_VERSION = c0cf323e1d56ce605e90927324d2fdafcfbb564a # Release 1.20.0
+OPENAL_VERSION = f5e0eef34db3a3ab94b61a2f99f84f078ba947e7 # Release 1.20.1
 OPENAL_DIR = $(ANDR_ROOT)/deps/openal-soft
 OPENAL_LIB = $(OPENAL_DIR)/libopenal.a
 OPENAL_TIMESTAMP = $(OPENAL_DIR)/timestamp
@@ -88,7 +87,7 @@ IRRLICHT_TIMESTAMP = $(IRRLICHT_DIR)/timestamp
 IRRLICHT_TIMESTAMP_INT = $(ANDR_ROOT)/deps/irrlicht_timestamp
 IRRLICHT_URL_HTTP = https://github.com/MoNTE48/Irrlicht/archive/$(IRRLICHT_BRANCH).zip
 
-CURL_VERSION = 7.67.0
+CURL_VERSION = 7.68.0
 CURL_DIR = $(ANDR_ROOT)/deps/curl
 CURL_LIB = $(CURL_DIR)/lib/.libs/libcurl.a
 CURL_TIMESTAMP = $(CURL_DIR)/timestamp
@@ -106,14 +105,14 @@ ICONV_VERSION = 1.16
 ICONV_DIR = $(ANDR_ROOT)/deps/libiconv
 ICONV_URL_HTTP = https://ftp.gnu.org/pub/gnu/libiconv/libiconv-$(ICONV_VERSION).tar.gz
 
-LUAJIT_VERSION = 2.1.2
+LUAJIT_VERSION = 2.1
 LUAJIT_DIR = $(ANDR_ROOT)/deps/luajit
-LUAJIT_LIB = $(LUAJIT_DIR)src/libluajit.a
+LUAJIT_LIB = $(LUAJIT_DIR)/src/libluajit.a
 LUAJIT_TIMESTAMP = $(LUAJIT_DIR)/timestamp
 LUAJIT_TIMESTAMP_INT = $(ANDR_ROOT)/deps/luajit_timestamp
-LUAJIT_URL_HTTP = https://github.com/moonjit/moonjit/archive/${LUAJIT_VERSION}.zip
+LUAJIT_URL_HTTP = https://github.com/LuaJIT/LuaJIT/archive/v${LUAJIT_VERSION}.zip
 
-GMP_VERSION = 6.1.2
+GMP_VERSION = 6.2.0
 GMP_DIR = $(ANDR_ROOT)/deps/gmp
 GMP_LIB = $(GMP_DIR)/usr/lib/libgmp.a
 GMP_TIMESTAMP = $(GMP_DIR)/timestamp
@@ -129,7 +128,7 @@ release : local.properties
 
 local.properties:
 	@echo "Please specify path of ANDROID NDK";							\
-	echo "e.g. $$HOME/Android/android-ndk-r20/";						\
+	echo "e.g. $$HOME/Android/android-ndk-r21/";						\
 	read ANDROID_NDK ;													\
 	if [ ! -d $$ANDROID_NDK ] ; then									\
 		echo "$$ANDROID_NDK is not a valid folder";						\
@@ -148,11 +147,9 @@ openal_download :
 		echo "openal sources missing, downloading...";					\
 		mkdir -p ${ANDR_ROOT}/deps;										\
 		cd ${ANDR_ROOT}/deps;											\
-		git clone --branch ${OPENAL_VERSION} ${OPENAL_URL_GIT}			\
-			openal-soft || exit 1;										\
-#		git clone ${OPENAL_URL_GIT} || exit 1;							\
+		git clone ${OPENAL_URL_GIT} || exit 1;							\
 		cd ${OPENAL_DIR};												\
-#		git reset --hard ${OPENAL_VERSION};								\
+		git reset --hard ${OPENAL_VERSION};								\
 		sed '/CMAKE_FIND_ROOT_PATH / s/^/#/' -i XCompile-Android.txt;	\
 		sed '/CMAKE_C_COMPILER/ s/-gcc"/-clang"/' -i XCompile-Android.txt;\
 		sed '/CMAKE_CXX_COMPILER/ s/-g++"/-clang++"/' -i XCompile-Android.txt;\
@@ -171,22 +168,19 @@ $(OPENAL_LIB): $(OPENAL_TIMESTAMP)
 	if [ $$REFRESH -ne 0 ] ; then										\
 	echo "changed timestamp for openal detected building...";			\
 	cd ${OPENAL_DIR};													\
-	export TOOLCHAIN=/tmp/ndk-${TARGET_HOST}-openal;					\
+	export TOOLCHAIN=${OPENAL_DIR}/TOOLCHAIN;							\
 	${ANDROID_NDK}/build/tools/make_standalone_toolchain.py				\
 		--arch ${TARGET_ARCH}											\
 		--api ${API}													\
 		--stl=${APP_STL_LIB}											\
 		--install-dir=$${TOOLCHAIN};									\
-	if [[ ${COMPILER_VERSION} == "clang" && ${API} -lt 18 ]] ; then		\
-		cd "$${TOOLCHAIN}/sysroot/usr/local/include";					\
-		sed '/log2f/ s/^/\/\//' -i math.h;								\
-		cd ${OPENAL_DIR};												\
-	fi;																	\
 	export PATH="$${TOOLCHAIN}/bin:$${PATH}";							\
 	cmake .																\
 		-DCMAKE_TOOLCHAIN_FILE=XCompile-Android.txt -DLIBTYPE=STATIC	\
 		-DCMAKE_C_FLAGS="${TARGET_CFLAGS_ADDON}"						\
+		-DCMAKE_CXX_FLAGS="${TARGET_CXXFLAGS_ADDON} -fPIC"				\
 		-DHOST=${CROSS_PREFIX} -DCMAKE_FIND_ROOT_PATH=$${TOOLCHAIN}		\
+		-DALSOFT_BACKEND_WAVE=FALSE										\
 		-DALSOFT_NO_CONFIG_UTIL=TRUE || exit 1;							\
 	$(MAKE) || exit 1;													\
 	touch ${OPENAL_TIMESTAMP};											\
@@ -271,8 +265,8 @@ $(LEVELDB_LIB): $(LEVELDB_TIMESTAMP)
 	fi;																	\
 	if [ $$REFRESH -ne 0 ] ; then										\
 	echo "changed timestamp for leveldb detected building...";			\
-	cd deps/leveldb;													\
-	export TOOLCHAIN=/tmp/ndk-${TARGET_HOST}-leveldb;					\
+	cd ${LEVELDB_DIR};													\
+	export TOOLCHAIN=${LEVELDB_DIR}/TOOLCHAIN;							\
 	${ANDROID_NDK}/build/tools/make_standalone_toolchain.py				\
 		--arch ${TARGET_ARCH}											\
 		--api ${API}													\
@@ -293,7 +287,7 @@ $(LEVELDB_LIB): $(LEVELDB_TIMESTAMP)
 	fi
 
 clean_leveldb :
-	$(RM) -rf deps/leveldb
+	$(RM) -rf ${LEVELDB_DIR}
 
 $(FREETYPE_TIMESTAMP) : freetype_download
 	@LAST_MODIF=$$(find ${FREETYPE_DIR} -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ");\
@@ -327,11 +321,10 @@ $(FREETYPE_LIB) : $(FREETYPE_TIMESTAMP)
 		REFRESH=1;														\
 	fi;																	\
 	if [ $$REFRESH -ne 0 ] ; then										\
-	mkdir -p ${FREETYPE_DIR};											\
 	export PATH=$$PATH:${ANDROID_NDK};									\
 	echo "changed timestamp for freetype detected building...";			\
-	cd deps/freetype;													\
-	export TOOLCHAIN=/tmp/ndk-${TARGET_HOST}-freetype;					\
+	cd ${FREETYPE_DIR};													\
+	export TOOLCHAIN=${FREETYPE_DIR}/TOOLCHAIN;							\
 	${ANDROID_NDK}/build/tools/make_standalone_toolchain.py				\
 		--arch ${TARGET_ARCH}											\
 		--api ${API}													\
@@ -339,13 +332,13 @@ $(FREETYPE_LIB) : $(FREETYPE_TIMESTAMP)
 		--install-dir=$${TOOLCHAIN};									\
 	export PATH="$${TOOLCHAIN}/bin:$${PATH}";							\
 	export TARGET_OS=OS_ANDROID_CROSSCOMPILE;							\
-	export CPPFLAGS="$${CPPFLAGS} ${TARGET_CXXFLAGS_ADDON} -fPIC";			\
 	export CFLAGS="$${CFLAGS} ${TARGET_CFLAGS_ADDON}";					\
+	export CPPFLAGS="$${CPPFLAGS} ${TARGET_CXXFLAGS_ADDON} -fPIC";		\
 	CC=${CROSS_CC} ./configure --host=${TARGET_TOOLCHAIN}				\
 		--enable-static --disable-shared --with-zlib=yes				\
 		--with-bzip2=no --with-png=no --with-harfbuzz=no				\
-		--prefix=${TOOLCHAIN} || exit 1;								\
-	CC=${CROSS_CC} ANDROID_DEV=/tmp/ndk-${TARGET_HOST}-freetype			\
+		--prefix=$${TOOLCHAIN} || exit 1;								\
+	CC=${CROSS_CC} ANDROID_DEV=$${TOOLCHAIN}							\
 		$(MAKE) || exit 1;												\
 	touch ${FREETYPE_TIMESTAMP};										\
 	touch ${FREETYPE_TIMESTAMP_INT};									\
@@ -367,7 +360,7 @@ iconv_download :
 		rm libiconv-${ICONV_VERSION}.tar.gz;							\
 		mv libiconv-${ICONV_VERSION} libiconv;							\
 		cd libiconv;													\
-		export TOOLCHAIN=/tmp/ndk-${TARGET_HOST}-iconv;					\
+		export TOOLCHAIN=${ICONV_DIR}/TOOLCHAIN;						\
 		${ANDROID_NDK}/build/tools/make_standalone_toolchain.py			\
 			--arch ${TARGET_ARCH}										\
 			--api ${API}												\
@@ -380,7 +373,7 @@ clean_iconv :
 	$(RM) -rf ${ICONV_DIR}
 
 irrlicht_download :
-	@if [ ! -d "deps/irrlicht" ] ; then									\
+	@if [ ! -d ${IRRLICHT_DIR} ] ; then									\
 		echo "irrlicht sources missing, downloading...";				\
 		mkdir -p ${ANDR_ROOT}/deps;										\
 		cd deps;														\
@@ -412,9 +405,8 @@ $(IRRLICHT_LIB): $(IRRLICHT_TIMESTAMP)
 		REFRESH=1;														\
 	fi;																	\
 	if [ $$REFRESH -ne 0 ] ; then										\
-	mkdir -p ${IRRLICHT_DIR};											\
 	echo "changed timestamp for irrlicht detected building...";			\
-	cd deps/irrlicht/source/Irrlicht/Android;							\
+	cd ${IRRLICHT_DIR}/source/Irrlicht/Android;							\
 	export APP_PLATFORM=android-${API};									\
 	export TARGET_ABI=${TARGET_ABI};									\
 	${ANDROID_NDK}/ndk-build											\
@@ -433,7 +425,7 @@ $(IRRLICHT_LIB): $(IRRLICHT_TIMESTAMP)
 	fi
 
 clean_irrlicht :
-	$(RM) -rf deps/irrlicht
+	$(RM) -rf ${IRRLICHT_DIR}
 
 $(CURL_TIMESTAMP) : curl_download
 	@LAST_MODIF=$$(find ${CURL_DIR} -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ");\
@@ -442,7 +434,7 @@ $(CURL_TIMESTAMP) : curl_download
 	fi
 
 curl_download :
-	@if [ ! -d "deps/curl" ] ; then										\
+	@if [ ! -d ${CURL_DIR} ] ; then										\
 		echo "curl sources missing, downloading...";					\
 		mkdir -p ${ANDR_ROOT}/deps;										\
 		cd deps;														\
@@ -466,10 +458,9 @@ $(CURL_LIB) : $(CURL_TIMESTAMP)
 		REFRESH=1;														\
 	fi;																	\
 	if [ $$REFRESH -ne 0 ] ; then										\
-	mkdir -p ${CURL_DIR};												\
 	echo "changed timestamp for curl detected building...";				\
-	cd deps/curl;														\
-	export TOOLCHAIN=/tmp/ndk-${TARGET_HOST}-curl;						\
+	cd ${CURL_DIR};														\
+	export TOOLCHAIN=${CURL_DIR}/TOOLCHAIN;								\
 	${ANDROID_NDK}/build/tools/make_standalone_toolchain.py				\
 		--arch ${TARGET_ARCH}											\
 		--api ${API}													\
@@ -514,9 +505,9 @@ luajit_download :
 		mkdir -p ${ANDR_ROOT}/deps;										\
 		cd ${ANDR_ROOT}/deps;											\
 		wget ${LUAJIT_URL_HTTP} || exit 1;								\
-		unzip ${LUAJIT_VERSION}.zip || exit 1;							\
-		rm ${LUAJIT_VERSION}.zip;										\
-		mv moonjit-${LUAJIT_VERSION} luajit;							\
+		unzip v${LUAJIT_VERSION}.zip || exit 1;							\
+		rm v${LUAJIT_VERSION}.zip;										\
+		mv LuaJIT-${LUAJIT_VERSION} luajit;							\
 	fi
 
 luajit : $(LUAJIT_LIB)
@@ -530,11 +521,10 @@ $(LUAJIT_LIB) : $(LUAJIT_TIMESTAMP)
 		REFRESH=1;														\
 	fi;																	\
 	if [ $$REFRESH -ne 0 ] ; then										\
-	mkdir -p ${LUAJIT_DIR};												\
 	export PATH=$$PATH:${ANDROID_NDK};									\
 	echo "changed timestamp for luajit detected building...";			\
 	cd ${LUAJIT_DIR};													\
-	export TOOLCHAIN=/tmp/ndk-${TARGET_HOST}-luajit;					\
+	export TOOLCHAIN=${LUAJIT_DIR}/TOOLCHAIN;							\
 	${ANDROID_NDK}/build/tools/make_standalone_toolchain.py				\
 		--arch ${TARGET_ARCH}											\
 		--api ${API}													\
@@ -542,7 +532,7 @@ $(LUAJIT_LIB) : $(LUAJIT_TIMESTAMP)
 		--install-dir=$${TOOLCHAIN};									\
 	export PATH="$${TOOLCHAIN}/bin:$${PATH}";							\
 	export TARGET_FLAGS="${TARGET_CFLAGS_ADDON} -fno-fast-math";		\
-	$(MAKE) amalg CROSS=${CROSS_PREFIX}- TARGET_CC=${CROSS_PREFIX}-clang		\
+	$(MAKE) amalg CROSS=${CROSS_PREFIX}- TARGET_CC=${CROSS_PREFIX}-clang	\
 	XCFLAGS="-DLUAJIT_DISABLE_FFI" HOST_CC=${HOST_CC} BUILDMODE=static;	\
 	touch ${LUAJIT_TIMESTAMP};											\
 	touch ${LUAJIT_TIMESTAMP_INT};										\
@@ -552,7 +542,7 @@ $(LUAJIT_LIB) : $(LUAJIT_TIMESTAMP)
 	fi
 
 clean_luajit :
-	$(RM) -R deps/luajit
+	$(RM) -rf ${LUAJIT_DIR}
 
 $(GMP_TIMESTAMP) : gmp_download
 	@LAST_MODIF=$$(find ${GMP_DIR} -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ");\
@@ -586,10 +576,9 @@ $(GMP_LIB) : $(GMP_TIMESTAMP)
 		REFRESH=1;														\
 	fi;																	\
 	if [ $$REFRESH -ne 0 ] ; then										\
-	mkdir -p ${GMP_DIR};												\
 	echo "changed timestamp for gmp detected building...";				\
-	cd deps/gmp;														\
-	export TOOLCHAIN=/tmp/ndk-${TARGET_HOST}-gmp;						\
+	cd ${GMP_DIR};														\
+	export TOOLCHAIN=${GMP_DIR}/TOOLCHAIN;								\
 	${ANDROID_NDK}/build/tools/make_standalone_toolchain.py				\
 		--arch ${TARGET_ARCH}											\
 		--api ${API}													\
@@ -612,10 +601,11 @@ $(GMP_LIB) : $(GMP_TIMESTAMP)
 	fi
 
 clean_gmp :
-	$(RM) -R deps/gmp
+	$(RM) -R ${GMP_DIR}
 
 deps : $(IRRLICHT_LIB) $(FREETYPE_LIB) $(CURL_LIB) $(LEVELDB_LIB)		\
-	$(LUAJIT_LIB) $(OPENAL_LIB) $(VORBIS_LIB) $(GMP_LIB) iconv_download
+	$(LUAJIT_LIB) $(OPENAL_LIB) $(VORBIS_LIB) iconv_download
+#	$(GMP_LIB)
 
 clean_all :
 	$(RM) -R deps
