@@ -60,7 +60,8 @@ APP_STL_LIB = libc++
 SHELL := /bin/bash
 ANDR_ROOT = $(shell pwd)
 
-LEVELDB_VERSION = 1.20
+OPENAL_VERSION = v1.19
+#OPENAL_VERSION = f5e0eef34db3a3ab94b61a2f99f84f078ba947e7 # Release 1.20.1 has a broken sound
 LEVELDB_DIR = $(ANDR_ROOT)/deps/leveldb
 LEVELDB_LIB = $(LEVELDB_DIR)/out-static/libleveldb.a
 LEVELDB_TIMESTAMP = $(LEVELDB_DIR)/timestamp
@@ -87,12 +88,28 @@ IRRLICHT_TIMESTAMP = $(IRRLICHT_DIR)/timestamp
 IRRLICHT_TIMESTAMP_INT = $(ANDR_ROOT)/deps/irrlicht_timestamp
 IRRLICHT_URL_HTTP = https://github.com/MoNTE48/Irrlicht/archive/$(IRRLICHT_BRANCH).zip
 
-CURL_VERSION = 7.68.0
+# Unused, replaced by mbedTLS
+OPENSSL_VERSION = 1.1.1f
+OPENSSL_DIR = $(ANDR_ROOT)/deps/openssl
+OPENSSL_LIB = $(OPENSSL_DIR)/libssl.a
+OPENSSL_TIMESTAMP = $(OPENSSL_DIR)/timestamp
+OPENSSL_TIMESTAMP_INT = $(ANDR_ROOT)/deps/openssl_timestamp
+OPENSSL_URL = https://www.openssl.org/source/openssl-$(OPENSSL_VERSION).tar.gz
+
+# A lightweight OpenSSL replacement
+MBEDTLS_VERSION = 2.16.5
+MBEDTLS_DIR = $(ANDR_ROOT)/deps/mbedtls
+MBEDTLS_LIB = $(MBEDTLS_DIR)/libmbedtls.a
+MBEDTLS_TIMESTAMP = $(MBEDTLS_DIR)/timestamp
+MBEDTLS_TIMESTAMP_INT = $(ANDR_ROOT)/deps/mbedtls_timestamp
+MBEDTLS_URL = https://github.com/ARMmbed/mbedtls/archive/mbedtls-$(MBEDTLS_VERSION).tar.gz
+
+CURL_VERSION = 7.69.1
 CURL_DIR = $(ANDR_ROOT)/deps/curl
 CURL_LIB = $(CURL_DIR)/lib/.libs/libcurl.a
 CURL_TIMESTAMP = $(CURL_DIR)/timestamp
 CURL_TIMESTAMP_INT = $(ANDR_ROOT)/deps/curl_timestamp
-CURL_URL_HTTP = http://dl.uxnr.de/mirror/curl/curl-${CURL_VERSION}.tar.bz2
+CURL_URL_HTTP = http://dl.uxnr.de/mirror/curl/curl-$(CURL_VERSION).tar.bz2
 
 FREETYPE_VERSION = 2.10.1
 FREETYPE_DIR = $(ANDR_ROOT)/deps/freetype
@@ -110,8 +127,9 @@ LUAJIT_DIR = $(ANDR_ROOT)/deps/luajit
 LUAJIT_LIB = $(LUAJIT_DIR)/src/libluajit.a
 LUAJIT_TIMESTAMP = $(LUAJIT_DIR)/timestamp
 LUAJIT_TIMESTAMP_INT = $(ANDR_ROOT)/deps/luajit_timestamp
-LUAJIT_URL_HTTP = https://github.com/LuaJIT/LuaJIT/archive/v${LUAJIT_VERSION}.zip
+LUAJIT_URL_HTTP = https://github.com/LuaJIT/LuaJIT/archive/v$(LUAJIT_VERSION).zip
 
+# Unused, deprecated
 GMP_VERSION = 6.2.0
 GMP_DIR = $(ANDR_ROOT)/deps/gmp
 GMP_LIB = $(GMP_DIR)/usr/lib/libgmp.a
@@ -147,9 +165,11 @@ openal_download :
 		echo "openal sources missing, downloading...";					\
 		mkdir -p ${ANDR_ROOT}/deps;										\
 		cd ${ANDR_ROOT}/deps;											\
-		git clone ${OPENAL_URL_GIT} || exit 1;							\
+		git clone --branch ${OPENAL_VERSION} ${OPENAL_URL_GIT}			\
+			openal-soft || exit 1;										\
+#		git clone ${OPENAL_URL_GIT} || exit 1;							\
 		cd ${OPENAL_DIR};												\
-		git reset --hard ${OPENAL_VERSION};								\
+#		git reset --hard ${OPENAL_VERSION};								\
 		sed '/CMAKE_FIND_ROOT_PATH / s/^/#/' -i XCompile-Android.txt;	\
 		sed '/CMAKE_C_COMPILER/ s/-gcc"/-clang"/' -i XCompile-Android.txt;\
 		sed '/CMAKE_CXX_COMPILER/ s/-g++"/-clang++"/' -i XCompile-Android.txt;\
@@ -182,16 +202,16 @@ $(OPENAL_LIB): $(OPENAL_TIMESTAMP)
 		-DHOST=${CROSS_PREFIX} -DCMAKE_FIND_ROOT_PATH=$${TOOLCHAIN}		\
 		-DALSOFT_BACKEND_WAVE=FALSE										\
 		-DALSOFT_NO_CONFIG_UTIL=TRUE || exit 1;							\
-	$(MAKE) || exit 1;													\
+	$(MAKE) -s || exit 1;												\
 	touch ${OPENAL_TIMESTAMP};											\
 	touch ${OPENAL_TIMESTAMP_INT};										\
-	$(RM) -rf $${TOOLCHAIN};											\
+	$(RM) -r $${TOOLCHAIN};												\
 	else																\
 		echo "nothing to be done for openal";							\
 	fi
 
 clean_openal :
-	$(RM) -rf ${OPENAL_DIR}
+	$(RM) -r ${OPENAL_DIR}
 
 $(VORBIS_TIMESTAMP) : vorbis_download
 	@LAST_MODIF=$$(find ${VORBIS_DIR} -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ");\
@@ -235,7 +255,7 @@ $(VORBIS_LIB) : $(VORBIS_TIMESTAMP)
 	fi
 
 clean_vorbis :
-	$(RM) -rf ${VORBIS_DIR}
+	$(RM) -r ${VORBIS_DIR}
 
 $(LEVELDB_TIMESTAMP) : leveldb_download
 	@LAST_MODIF=$$(find ${LEVELDB_DIR} -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ");\
@@ -249,8 +269,8 @@ leveldb_download :
 		mkdir -p ${ANDR_ROOT}/deps;										\
 		cd ${ANDR_ROOT}/deps ;											\
 		wget ${LEVELDB_URL} || exit 1;									\
-		unzip v${LEVELDB_VERSION}.zip || exit 1;						\
-		rm v${LEVELDB_VERSION}.zip || exit 1;							\
+		unzip -q v${LEVELDB_VERSION}.zip || exit 1;						\
+		$(RM) -r v${LEVELDB_VERSION}.zip || exit 1;						\
 		mv leveldb-${LEVELDB_VERSION} leveldb || exit 1;				\
 	fi
 
@@ -276,18 +296,19 @@ $(LEVELDB_LIB): $(LEVELDB_TIMESTAMP)
 	export CC=${CROSS_CC};												\
 	export CXX=${CROSS_CXX};											\
 	export TARGET_OS=OS_ANDROID_CROSSCOMPILE;							\
+	export CPPFLAGS="$${CPPFLAGS} ${TARGET_CXXFLAGS_ADDON}";			\
 	export CFLAGS="$${CFLAGS} ${TARGET_CFLAGS_ADDON}";					\
-	export CXXFLAGS="$${CPPFLAGS} ${TARGET_CXXFLAGS_ADDON}";			\
-	$(MAKE) out-static/libleveldb.a || exit 1;							\
+	export CXXFLAGS="$${CXXFLAGS} ${TARGET_CXXFLAGS_ADDON}";			\
+	$(MAKE) out-static/libleveldb.a -s || exit 1;						\
 	touch ${LEVELDB_TIMESTAMP};											\
 	touch ${LEVELDB_TIMESTAMP_INT};										\
-	$(RM) -rf $${TOOLCHAIN};											\
+	$(RM) -r $${TOOLCHAIN};												\
 	else																\
 		echo "nothing to be done for leveldb";							\
 	fi
 
 clean_leveldb :
-	$(RM) -rf ${LEVELDB_DIR}
+	$(RM) -r ${LEVELDB_DIR}
 
 $(FREETYPE_TIMESTAMP) : freetype_download
 	@LAST_MODIF=$$(find ${FREETYPE_DIR} -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ");\
@@ -304,7 +325,7 @@ freetype_download :
 		wget ${FREETYPE_URL_HTTP} || exit 1;							\
 		tar -xJf freetype-${FREETYPE_VERSION}.tar.xz -C freetype		\
 			--strip-components=1 || exit 1;								\
-		rm freetype-${FREETYPE_VERSION}.tar.xz;							\
+		$(RM) -r freetype-${FREETYPE_VERSION}.tar.xz;					\
 	fi
 
 freetype : $(FREETYPE_LIB)
@@ -339,16 +360,16 @@ $(FREETYPE_LIB) : $(FREETYPE_TIMESTAMP)
 		--with-bzip2=no --with-png=no --with-harfbuzz=no				\
 		--prefix=$${TOOLCHAIN} || exit 1;								\
 	CC=${CROSS_CC} ANDROID_DEV=$${TOOLCHAIN}							\
-		$(MAKE) || exit 1;												\
+		$(MAKE) -s || exit 1;											\
 	touch ${FREETYPE_TIMESTAMP};										\
 	touch ${FREETYPE_TIMESTAMP_INT};									\
-	$(RM) -rf $${TOOLCHAIN};											\
+	$(RM) -r $${TOOLCHAIN};												\
 	else																\
 		echo "nothing to be done for freetype";							\
 	fi
 
 clean_freetype :
-	$(RM) -rf ${FREETYPE_DIR}
+	$(RM) -r ${FREETYPE_DIR}
 
 iconv_download :
 	@if [ ! -d ${ICONV_DIR} ] ; then									\
@@ -357,7 +378,7 @@ iconv_download :
 		cd ${ANDR_ROOT}/deps;											\
 		wget ${ICONV_URL_HTTP} || exit 1;								\
 		tar -xzf libiconv-${ICONV_VERSION}.tar.gz || exit 1;			\
-		rm libiconv-${ICONV_VERSION}.tar.gz;							\
+		$(RM) -r libiconv-${ICONV_VERSION}.tar.gz;						\
 		mv libiconv-${ICONV_VERSION} libiconv;							\
 		cd libiconv;													\
 		export TOOLCHAIN=${ICONV_DIR}/TOOLCHAIN;						\
@@ -370,7 +391,7 @@ iconv_download :
 	fi
 
 clean_iconv :
-	$(RM) -rf ${ICONV_DIR}
+	$(RM) -r ${ICONV_DIR}
 
 irrlicht_download :
 	@if [ ! -d ${IRRLICHT_DIR} ] ; then									\
@@ -378,8 +399,8 @@ irrlicht_download :
 		mkdir -p ${ANDR_ROOT}/deps;										\
 		cd deps;														\
 		wget ${IRRLICHT_URL_HTTP} || exit 1;							\
-		unzip ${IRRLICHT_BRANCH}.zip || exit 1;							\
-		rm ${IRRLICHT_BRANCH}.zip;										\
+		unzip -q ${IRRLICHT_BRANCH}.zip || exit 1;						\
+		$(RM) -r ${IRRLICHT_BRANCH}.zip;								\
 		mv Irrlicht-${IRRLICHT_BRANCH} irrlicht;						\
 		cd irrlicht;													\
 		mkdir -p lib/Android;											\
@@ -425,7 +446,120 @@ $(IRRLICHT_LIB): $(IRRLICHT_TIMESTAMP)
 	fi
 
 clean_irrlicht :
-	$(RM) -rf ${IRRLICHT_DIR}
+	$(RM) -r ${IRRLICHT_DIR}
+
+$(OPENSSL_TIMESTAMP) : openssl_download
+	@LAST_MODIF=$$(find ${OPENSSL_DIR} -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" "); \
+	if [ $$(basename $$LAST_MODIF) != "timestamp" ] ; then				\
+		touch ${OPENSSL_TIMESTAMP};										\
+	fi
+
+openssl_download :
+	@if [ ! -d ${OPENSSL_DIR} ] ; then									\
+		echo "openssl sources missing, downloading...";					\
+		mkdir -p ${ANDR_ROOT}/deps;										\
+		cd ${ANDR_ROOT}/deps;											\
+		wget ${OPENSSL_URL} || exit 1;									\
+		tar -xzf openssl-${OPENSSL_VERSION}.tar.gz;						\
+		$(RM) -r openssl-${OPENSSL_VERSION}.tar.gz;						\
+		mv openssl-${OPENSSL_VERSION} openssl;							\
+	fi
+
+openssl : $(OPENSSL_LIB)
+
+$(OPENSSL_LIB): $(OPENSSL_TIMESTAMP)
+	@REFRESH=0;															\
+	if [ ! -e ${OPENSSL_TIMESTAMP_INT} ] ; then							\
+		echo "${OPENSSL_TIMESTAMP_INT} doesn't exist";					\
+		REFRESH=1;														\
+	fi;																	\
+	if [ ${OPENSSL_TIMESTAMP} -nt ${OPENSSL_TIMESTAMP_INT} ]; then		\
+		REFRESH=1;														\
+	fi;																	\
+	if [ $$REFRESH -ne 0 ] ; then										\
+	export PATH=$$PATH:${ANDROID_NDK};									\
+	echo "changed timestamp for openssl detected building...";			\
+	cd ${OPENSSL_DIR};													\
+	export TOOLCHAIN=${OPENSSL_DIR}/TOOLCHAIN;							\
+	export ANDROID_NDK_HOME=${OPENSSL_DIR}/TOOLCHAIN;					\
+	${ANDROID_NDK}/build/tools/make_standalone_toolchain.py				\
+		--arch ${TARGET_ARCH}											\
+		--api ${API}													\
+		--stl=${APP_STL_LIB}											\
+		--install-dir=$${TOOLCHAIN};									\
+	export PATH="$${TOOLCHAIN}/bin:$${PATH}";							\
+	export TARGET_OS=OS_ANDROID_CROSSCOMPILE;							\
+	export CC=${CROSS_CC};												\
+	export CPPFLAGS="$${CPPFLAGS} ${TARGET_CXXFLAGS_ADDON}";			\
+	export CFLAGS="$${CFLAGS} ${TARGET_CFLAGS_ADDON}";					\
+	./Configure	-DL_ENDIAN no-shared no-asm no-srp no-err android-${TARGET_ARCH} \
+		--prefix=${OPENSSL_DIR}/build;									\
+	$(MAKE) -s || exit 1;												\
+	$(MAKE) install -s || exit 1;										\
+	touch ${OPENSSL_TIMESTAMP};											\
+	touch ${OPENSSL_TIMESTAMP_INT};										\
+	$(RM) -r $${TOOLCHAIN};												\
+	else																\
+		echo "nothing to be done for openssl";							\
+	fi
+
+clean_openssl :
+	$(RM) -r ${OPENSSL_DIR}
+
+$(MBEDTLS_TIMESTAMP) : mbedtls_download
+	@LAST_MODIF=$$(find ${MBEDTLS_DIR} -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" "); \
+	if [ $$(basename $$LAST_MODIF) != "timestamp" ] ; then				\
+		touch ${MBEDTLS_TIMESTAMP};										\
+	fi
+
+mbedtls_download :
+	@if [ ! -d ${MBEDTLS_DIR} ] ; then									\
+		echo "mbedtls sources missing, downloading...";					\
+		mkdir -p ${ANDR_ROOT}/deps;										\
+		cd ${ANDR_ROOT}/deps;											\
+		wget ${MBEDTLS_URL} || exit 1;									\
+		mkdir -p mbedtls;												\
+		tar -xzf mbedtls-${MBEDTLS_VERSION}.tar.gz -C mbedtls --strip=1; \
+		$(RM) -r mbedtls-${MBEDTLS_VERSION}.tar.gz;						\
+	fi
+
+mbedtls : $(MBEDTLS_LIB)
+
+$(MBEDTLS_LIB): $(MBEDTLS_TIMESTAMP)
+	@REFRESH=0;															\
+	if [ ! -e ${MBEDTLS_TIMESTAMP_INT} ] ; then							\
+		echo "${MBEDTLS_TIMESTAMP_INT} doesn't exist";					\
+		REFRESH=1;														\
+	fi;																	\
+	if [ ${MBEDTLS_TIMESTAMP} -nt ${MBEDTLS_TIMESTAMP_INT} ]; then		\
+		REFRESH=1;														\
+	fi;																	\
+	if [ $$REFRESH -ne 0 ] ; then										\
+	export PATH=$$PATH:${ANDROID_NDK};									\
+	echo "changed timestamp for mbedtls detected building...";			\
+	cd ${MBEDTLS_DIR};													\
+	export TOOLCHAIN=${MBEDTLS_DIR}/TOOLCHAIN;							\
+	${ANDROID_NDK}/build/tools/make_standalone_toolchain.py				\
+		--arch ${TARGET_ARCH}											\
+		--api ${API}													\
+		--stl=${APP_STL_LIB}											\
+		--install-dir=$${TOOLCHAIN};									\
+	export PATH="$${TOOLCHAIN}/bin:$${PATH}";							\
+	export CC=${CROSS_CC};												\
+	export TARGET_FLAGS="${TARGET_CFLAGS_ADDON}";						\
+	export CFLAGS="$${CFLAGS} ${TARGET_CFLAGS_ADDON}";					\
+	export CPPFLAGS="$${CPPFLAGS} ${TARGET_CXXFLAGS_ADDON}";			\
+	$(MAKE) library -s;													\
+	$(MAKE) install DESTDIR=build -s || exit 1;							\
+	touch ${MBEDTLS_TIMESTAMP};											\
+	touch ${MBEDTLS_TIMESTAMP_INT};										\
+	$(RM) -r $${TOOLCHAIN};												\
+	else																\
+		echo "nothing to be done for mbedtls";							\
+	fi
+
+clean_mbedtls :
+	$(RM) -r ${MBEDTLS_DIR}
 
 $(CURL_TIMESTAMP) : curl_download
 	@LAST_MODIF=$$(find ${CURL_DIR} -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ");\
@@ -440,13 +574,13 @@ curl_download :
 		cd deps;														\
 		wget ${CURL_URL_HTTP} || exit 1;								\
 		tar -xjf curl-${CURL_VERSION}.tar.bz2 || exit 1;				\
-		rm curl-${CURL_VERSION}.tar.bz2;								\
+		$(RM) -r curl-${CURL_VERSION}.tar.bz2;							\
 		mv curl-${CURL_VERSION} curl;									\
 	fi
 
 curl : $(CURL_LIB)
 
-$(CURL_LIB) : $(CURL_TIMESTAMP)
+$(CURL_LIB) : $(CURL_TIMESTAMP) $(MBEDTLS_LIB)
 	@REFRESH=0;															\
 	if [ ! -e ${CURL_TIMESTAMP_INT} ] ; then							\
 		REFRESH=1;														\
@@ -467,31 +601,33 @@ $(CURL_LIB) : $(CURL_TIMESTAMP)
 		--stl=${APP_STL_LIB}											\
 		--install-dir=$${TOOLCHAIN};									\
 	export PATH="$${TOOLCHAIN}/bin:$${PATH}";							\
-	export CC=${CROSS_CC};												\
-	export CXX=${CROSS_CXX};											\
 	export TARGET_OS=OS_ANDROID_CROSSCOMPILE;							\
-	export CPPFLAGS="$${CPPFLAGS} ${TARGET_CXXFLAGS_ADDON}";			\
-	./configure --host=${TARGET_TOOLCHAIN}								\
+	export CC=${CROSS_CC};												\
+	export TARGET_OS=OS_ANDROID_CROSSCOMPILE;							\
+	export CPPFLAGS="$${CPPFLAGS} -I${MBEDTLS_DIR}/build/include ${TARGET_CXXFLAGS_ADDON}"; \
+	export CFLAGS="$${CFLAGS} -I${MBEDTLS_DIR}/build/include ${TARGET_CFLAGS_ADDON}"; \
+	./configure --host=${TARGET_TOOLCHAIN} \
+		--with-mbedtls=${MBEDTLS_DIR}/build \
 		--disable-shared --enable-static --disable-debug				\
 		--disable-verbose --disable-versioned-symbols					\
 		--enable-hidden-symbols --disable-dependency-tracking			\
 		--disable-proxy --disable-cookies --disable-crypto-auth			\
 		--disable-manual --disable-ares --disable-ftp					\
 		--disable-unix-sockets --without-libidn --without-librtmp		\
-		--without-ssl --disable-sspi --disable-ldap --disable-ldaps		\
+		--without-ssl --disable-sspi --disable-ldap --disable-ldaps					\
 		--disable-rtsp --disable-dict --disable-telnet --disable-tftp	\
 		--disable-pop3 --disable-imap --disable-smtp --disable-gopher	\
 		--disable-libcurl-option;										\
 	$(MAKE) -s || exit 1;												\
 	touch ${CURL_TIMESTAMP};											\
 	touch ${CURL_TIMESTAMP_INT};										\
-	$(RM) -rf $${TOOLCHAIN};											\
+	$(RM) -r $${TOOLCHAIN};												\
 	else																\
 		echo "nothing to be done for curl";								\
 	fi
 
 clean_curl :
-	$(RM) -R ${CURL_DIR}
+	$(RM) -r ${CURL_DIR}
 
 $(LUAJIT_TIMESTAMP) : luajit_download
 	@LAST_MODIF=$$(find ${LUAJIT_DIR} -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ");\
@@ -505,9 +641,9 @@ luajit_download :
 		mkdir -p ${ANDR_ROOT}/deps;										\
 		cd ${ANDR_ROOT}/deps;											\
 		wget ${LUAJIT_URL_HTTP} || exit 1;								\
-		unzip v${LUAJIT_VERSION}.zip || exit 1;							\
-		rm v${LUAJIT_VERSION}.zip;										\
-		mv LuaJIT-${LUAJIT_VERSION} luajit;							\
+		unzip -q v${LUAJIT_VERSION}.zip || exit 1;						\
+		$(RM) -r v${LUAJIT_VERSION}.zip;								\
+		mv LuaJIT-${LUAJIT_VERSION} luajit;								\
 	fi
 
 luajit : $(LUAJIT_LIB)
@@ -532,17 +668,17 @@ $(LUAJIT_LIB) : $(LUAJIT_TIMESTAMP)
 		--install-dir=$${TOOLCHAIN};									\
 	export PATH="$${TOOLCHAIN}/bin:$${PATH}";							\
 	export TARGET_FLAGS="${TARGET_CFLAGS_ADDON} -fno-fast-math";		\
-	$(MAKE) amalg CROSS=${CROSS_PREFIX}- TARGET_CC=${CROSS_PREFIX}-clang	\
+	$(MAKE) -s amalg CROSS=${CROSS_PREFIX}- TARGET_CC=${CROSS_PREFIX}-clang	\
 	XCFLAGS="-DLUAJIT_DISABLE_FFI" HOST_CC=${HOST_CC} BUILDMODE=static;	\
 	touch ${LUAJIT_TIMESTAMP};											\
 	touch ${LUAJIT_TIMESTAMP_INT};										\
-	$(RM) -rf $${TOOLCHAIN};											\
+	$(RM) -r $${TOOLCHAIN};												\
 	else																\
 		echo "nothing to be done for luajit";							\
 	fi
 
 clean_luajit :
-	$(RM) -rf ${LUAJIT_DIR}
+	$(RM) -r ${LUAJIT_DIR}
 
 $(GMP_TIMESTAMP) : gmp_download
 	@LAST_MODIF=$$(find ${GMP_DIR} -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ");\
@@ -559,7 +695,7 @@ gmp_download :
 		wget ${GMP_URL_HTTP} || exit 1;									\
 		tar -xJf gmp-${GMP_VERSION}.tar.xz -C gmp						\
 			--strip-components=1 || exit 1;								\
-		rm gmp-${GMP_VERSION}.tar.xz;									\
+		$(RM) -r gmp-${GMP_VERSION}.tar.xz;								\
 	fi
 
 gmp : $(GMP_LIB)
@@ -595,17 +731,18 @@ $(GMP_LIB) : $(GMP_TIMESTAMP)
 	$(MAKE) install DESTDIR=/${GMP_DIR} || exit 1;						\
 	touch ${GMP_TIMESTAMP};												\
 	touch ${GMP_TIMESTAMP_INT};											\
-	$(RM) -rf $${TOOLCHAIN};											\
+	$(RM) -r $${TOOLCHAIN};												\
 	else																\
 		echo "nothing to be done for gmp";								\
 	fi
 
 clean_gmp :
-	$(RM) -R ${GMP_DIR}
+	$(RM) -r ${GMP_DIR}
 
 deps : $(IRRLICHT_LIB) $(FREETYPE_LIB) $(CURL_LIB) $(LEVELDB_LIB)		\
-	$(LUAJIT_LIB) $(OPENAL_LIB) $(VORBIS_LIB) iconv_download
+	$(LUAJIT_LIB) $(OPENAL_LIB) $(VORBIS_LIB) $(MBEDTLS_LIB) iconv_download
+#	$(OPENSSL_LIB)
 #	$(GMP_LIB)
 
 clean_all :
-	$(RM) -R deps
+	$(RM) -r deps
