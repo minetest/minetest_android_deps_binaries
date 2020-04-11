@@ -10,12 +10,7 @@
 #TARGET_CFLAGS_ADDON = -mthumb -Ofast -fdata-sections -ffunction-sections -fvisibility=hidden -fexceptions -D__ANDROID_API__=$(API)
 #TARGET_CXXFLAGS_ADDON = $(TARGET_CFLAGS_ADDON) -frtti
 #CROSS_PREFIX = arm-linux-androideabi
-#CROSS_CC = clang
-#CROSS_CXX = clang++
 #HOST_CC = "gcc -m32" # required for LuaJIT
-#COMPILER_VERSION = clang
-#APP_STL = c++_static
-#APP_STL_LIB = libc++
 
 ######################################################################################
 # toolchain config for ARM64 (Clang)
@@ -29,12 +24,7 @@ TARGET_TOOLCHAIN = aarch64-linux-android
 TARGET_CFLAGS_ADDON = -Ofast -fvisibility=hidden -fexceptions -D__ANDROID_API__=$(API)
 TARGET_CXXFLAGS_ADDON = $(TARGET_CFLAGS_ADDON) -frtti
 CROSS_PREFIX = aarch64-linux-android
-CROSS_CC = clang
-CROSS_CXX = clang++
 HOST_CC = "gcc -m64" # required for LuaJIT
-COMPILER_VERSION = clang
-APP_STL = c++_static
-APP_STL_LIB = libc++
 
 ######################################################################################
 # toolchain config for x86 (clang)
@@ -48,27 +38,32 @@ APP_STL_LIB = libc++
 #TARGET_CFLAGS_ADDON = -march=i686 -mtune=intel -mssse3 -mfpmath=sse -m32 -Ofast -funroll-loops -fdata-sections -ffunction-sections -fvisibility=hidden -fexceptions -D__ANDROID_API__=$(API)
 #TARGET_CXXFLAGS_ADDON = $(TARGET_CFLAGS_ADDON) -frtti
 #CROSS_PREFIX = i686-linux-android
-#CROSS_CC = clang
-#CROSS_CXX = clang++
 #HOST_CC = "gcc -m32" # required for LuaJIT
-#COMPILER_VERSION = clang
-#APP_STL = c++_static
-#APP_STL_LIB = libc++
+
+######################################################################################
+# general toolchain config
+######################################################################################
+
+CROSS_CC = clang
+CROSS_CXX = clang++
+COMPILER_VERSION = clang
+APP_STL = c++_static
+APP_STL_LIB = libc++
 
 ######################################################################################
 
 SHELL := /bin/bash
 ANDR_ROOT = $(shell pwd)
 
-OPENAL_VERSION = v1.19
-#OPENAL_VERSION = f5e0eef34db3a3ab94b61a2f99f84f078ba947e7 # Release 1.20.1 has a broken sound
+LEVELDB_VERSION = 1.20
 LEVELDB_DIR = $(ANDR_ROOT)/deps/leveldb
 LEVELDB_LIB = $(LEVELDB_DIR)/out-static/libleveldb.a
 LEVELDB_TIMESTAMP = $(LEVELDB_DIR)/timestamp
 LEVELDB_TIMESTAMP_INT = $(ANDR_ROOT)/deps/leveldb_timestamp
 LEVELDB_URL = https://github.com/google/leveldb/archive/v$(LEVELDB_VERSION).zip
 
-OPENAL_VERSION = f5e0eef34db3a3ab94b61a2f99f84f078ba947e7 # Release 1.20.1
+OPENAL_VERSION = v1.19
+#OPENAL_VERSION = f5e0eef34db3a3ab94b61a2f99f84f078ba947e7 # Release 1.20.1 has a broken sound
 OPENAL_DIR = $(ANDR_ROOT)/deps/openal-soft
 OPENAL_LIB = $(OPENAL_DIR)/libopenal.a
 OPENAL_TIMESTAMP = $(OPENAL_DIR)/timestamp
