@@ -124,14 +124,6 @@ LUAJIT_TIMESTAMP = $(LUAJIT_DIR)/timestamp
 LUAJIT_TIMESTAMP_INT = $(ANDR_ROOT)/deps/luajit_timestamp
 LUAJIT_URL_HTTP = https://github.com/LuaJIT/LuaJIT/archive/v$(LUAJIT_VERSION).zip
 
-# Unused, deprecated
-GMP_VERSION = 6.2.0
-GMP_DIR = $(ANDR_ROOT)/deps/gmp
-GMP_LIB = $(GMP_DIR)/usr/lib/libgmp.a
-GMP_TIMESTAMP = $(GMP_DIR)/timestamp
-GMP_TIMESTAMP_INT = $(ANDR_ROOT)/deps/gmp_timestamp
-GMP_URL_HTTP = https://gmplib.org/download/gmp/gmp-$(GMP_VERSION).tar.xz
-
 ######################################################################################
 
 ANDROID_NDK = $(shell grep '^ndk\.dir' local.properties | sed 's/^.*=[[:space:]]*//')
@@ -675,69 +667,9 @@ $(LUAJIT_LIB) : $(LUAJIT_TIMESTAMP)
 clean_luajit :
 	$(RM) -r ${LUAJIT_DIR}
 
-$(GMP_TIMESTAMP) : gmp_download
-	@LAST_MODIF=$$(find ${GMP_DIR} -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ");\
-	if [ $$(basename $$LAST_MODIF) != "timestamp" ] ; then				\
-		touch ${GMP_TIMESTAMP};											\
-	fi
-
-gmp_download :
-	@if [ ! -d "${GMP_DIR}" ] ; then									\
-		echo "gmp sources missing, downloading...";						\
-		mkdir -p ${ANDR_ROOT}/deps;										\
-		cd deps;														\
-		mkdir gmp;														\
-		wget ${GMP_URL_HTTP} || exit 1;									\
-		tar -xJf gmp-${GMP_VERSION}.tar.xz -C gmp						\
-			--strip-components=1 || exit 1;								\
-		$(RM) -r gmp-${GMP_VERSION}.tar.xz;								\
-	fi
-
-gmp : $(GMP_LIB)
-
-$(GMP_LIB) : $(GMP_TIMESTAMP)
-	@REFRESH=0;															\
-	if [ ! -e ${GMP_TIMESTAMP_INT} ] ; then								\
-		REFRESH=1;														\
-	fi;																	\
-	if [ ! -e ${GMP_LIB} ] ; then										\
-		REFRESH=1;														\
-	fi;																	\
-	if [ ${GMP_TIMESTAMP} -nt ${GMP_TIMESTAMP_INT} ] ; then				\
-		REFRESH=1;														\
-	fi;																	\
-	if [ $$REFRESH -ne 0 ] ; then										\
-	echo "changed timestamp for gmp detected building...";				\
-	cd ${GMP_DIR};														\
-	export TOOLCHAIN=${GMP_DIR}/TOOLCHAIN;								\
-	${ANDROID_NDK}/build/tools/make_standalone_toolchain.py				\
-		--arch ${TARGET_ARCH}											\
-		--api ${API}													\
-		--stl=${APP_STL_LIB}											\
-		--install-dir=$${TOOLCHAIN};									\
-	export PATH="$${TOOLCHAIN}/bin:$${PATH}";							\
-	export CC=${CROSS_CC};												\
-	export CXX=${CROSS_CXX};											\
-	export TARGET_OS=OS_ANDROID_CROSSCOMPILE;							\
-	export CFLAGS="$${CFLAGS} ${TARGET_CFLAGS_ADDON}";					\
-	export CXXFLAGS="$${CPPFLAGS} ${TARGET_CXXFLAGS_ADDON}";			\
-	./configure --host=${TARGET_TOOLCHAIN}								\
-	--enable-static --disable-shared --prefix=/usr;						\
-	$(MAKE) install DESTDIR=/${GMP_DIR} || exit 1;						\
-	touch ${GMP_TIMESTAMP};												\
-	touch ${GMP_TIMESTAMP_INT};											\
-	$(RM) -r $${TOOLCHAIN};												\
-	else																\
-		echo "nothing to be done for gmp";								\
-	fi
-
-clean_gmp :
-	$(RM) -r ${GMP_DIR}
-
 deps : $(IRRLICHT_LIB) $(FREETYPE_LIB) $(CURL_LIB) $(LEVELDB_LIB)		\
 	$(LUAJIT_LIB) $(OPENAL_LIB) $(VORBIS_LIB) $(MBEDTLS_LIB) iconv_download
 #	$(OPENSSL_LIB)
-#	$(GMP_LIB)
 
 clean_all :
 	$(RM) -r deps
