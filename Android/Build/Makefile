@@ -83,15 +83,6 @@ IRRLICHT_TIMESTAMP = $(IRRLICHT_DIR)/timestamp
 IRRLICHT_TIMESTAMP_INT = $(ANDR_ROOT)/deps/irrlicht_timestamp
 IRRLICHT_URL_HTTP = https://github.com/MoNTE48/Irrlicht/archive/$(IRRLICHT_BRANCH).zip
 
-# Unused, replaced by mbedTLS
-OPENSSL_VERSION = 1.1.1f
-OPENSSL_DIR = $(ANDR_ROOT)/deps/openssl
-OPENSSL_LIB = $(OPENSSL_DIR)/libssl.a
-OPENSSL_TIMESTAMP = $(OPENSSL_DIR)/timestamp
-OPENSSL_TIMESTAMP_INT = $(ANDR_ROOT)/deps/openssl_timestamp
-OPENSSL_URL = https://www.openssl.org/source/openssl-$(OPENSSL_VERSION).tar.gz
-
-# A lightweight OpenSSL replacement
 MBEDTLS_VERSION = 2.16.5
 MBEDTLS_DIR = $(ANDR_ROOT)/deps/mbedtls
 MBEDTLS_LIB = $(MBEDTLS_DIR)/libmbedtls.a
@@ -435,64 +426,6 @@ $(IRRLICHT_LIB): $(IRRLICHT_TIMESTAMP)
 clean_irrlicht :
 	$(RM) -r ${IRRLICHT_DIR}
 
-$(OPENSSL_TIMESTAMP) : openssl_download
-	@LAST_MODIF=$$(find ${OPENSSL_DIR} -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" "); \
-	if [ $$(basename $$LAST_MODIF) != "timestamp" ] ; then				\
-		touch ${OPENSSL_TIMESTAMP};										\
-	fi
-
-openssl_download :
-	@if [ ! -d ${OPENSSL_DIR} ] ; then									\
-		echo "openssl sources missing, downloading...";					\
-		mkdir -p ${ANDR_ROOT}/deps;										\
-		cd ${ANDR_ROOT}/deps;											\
-		wget ${OPENSSL_URL} || exit 1;									\
-		tar -xzf openssl-${OPENSSL_VERSION}.tar.gz;						\
-		$(RM) -r openssl-${OPENSSL_VERSION}.tar.gz;						\
-		mv openssl-${OPENSSL_VERSION} openssl;							\
-	fi
-
-openssl : $(OPENSSL_LIB)
-
-$(OPENSSL_LIB): $(OPENSSL_TIMESTAMP)
-	@REFRESH=0;															\
-	if [ ! -e ${OPENSSL_TIMESTAMP_INT} ] ; then							\
-		echo "${OPENSSL_TIMESTAMP_INT} doesn't exist";					\
-		REFRESH=1;														\
-	fi;																	\
-	if [ ${OPENSSL_TIMESTAMP} -nt ${OPENSSL_TIMESTAMP_INT} ]; then		\
-		REFRESH=1;														\
-	fi;																	\
-	if [ $$REFRESH -ne 0 ] ; then										\
-	export PATH=$$PATH:${ANDROID_NDK};									\
-	echo "changed timestamp for openssl detected building...";			\
-	cd ${OPENSSL_DIR};													\
-	export TOOLCHAIN=${OPENSSL_DIR}/TOOLCHAIN;							\
-	export ANDROID_NDK_HOME=${OPENSSL_DIR}/TOOLCHAIN;					\
-	${ANDROID_NDK}/build/tools/make_standalone_toolchain.py				\
-		--arch ${TARGET_ARCH}											\
-		--api ${API}													\
-		--stl=${APP_STL_LIB}											\
-		--install-dir=$${TOOLCHAIN};									\
-	export PATH="$${TOOLCHAIN}/bin:$${PATH}";							\
-	export TARGET_OS=OS_ANDROID_CROSSCOMPILE;							\
-	export CC=${CROSS_CC};												\
-	export CPPFLAGS="$${CPPFLAGS} ${TARGET_CXXFLAGS_ADDON}";			\
-	export CFLAGS="$${CFLAGS} ${TARGET_CFLAGS_ADDON}";					\
-	./Configure	-DL_ENDIAN no-shared no-asm no-srp no-err android-${TARGET_ARCH} \
-		--prefix=${OPENSSL_DIR}/build;									\
-	$(MAKE) -s || exit 1;												\
-	$(MAKE) install -s || exit 1;										\
-	touch ${OPENSSL_TIMESTAMP};											\
-	touch ${OPENSSL_TIMESTAMP_INT};										\
-	$(RM) -r $${TOOLCHAIN};												\
-	else																\
-		echo "nothing to be done for openssl";							\
-	fi
-
-clean_openssl :
-	$(RM) -r ${OPENSSL_DIR}
-
 $(MBEDTLS_TIMESTAMP) : mbedtls_download
 	@LAST_MODIF=$$(find ${MBEDTLS_DIR} -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" "); \
 	if [ $$(basename $$LAST_MODIF) != "timestamp" ] ; then				\
@@ -669,7 +602,6 @@ clean_luajit :
 
 deps : $(IRRLICHT_LIB) $(FREETYPE_LIB) $(CURL_LIB) $(LEVELDB_LIB)		\
 	$(LUAJIT_LIB) $(OPENAL_LIB) $(VORBIS_LIB) $(MBEDTLS_LIB) iconv_download
-#	$(OPENSSL_LIB)
 
 clean_all :
 	$(RM) -r deps
