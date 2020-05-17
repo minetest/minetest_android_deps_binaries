@@ -123,14 +123,18 @@ release : local.properties
 	$(MAKE) deps
 
 local.properties:
-	@echo "Please specify path of ANDROID NDK";							\
-	echo "e.g. $$HOME/Android/android-ndk-r21/";						\
-	read ANDROID_NDK ;													\
+	@if [ -d ${ANDROID_SDK_ROOT}/ndk-bundle ] ; then					\
+		export ANDROID_NDK=${ANDROID_SDK_ROOT}/ndk-bundle;				\
+	else																\
+		echo "Please specify path of ANDROID NDK";						\
+		echo "e.g. $$HOME/Android/android-ndk-r21";						\
+		read ANDROID_NDK ;												\
+	fi;																	\
 	if [ ! -d $$ANDROID_NDK ] ; then									\
 		echo "$$ANDROID_NDK is not a valid folder";						\
 		exit 1;															\
 	fi;																	\
-	echo "ndk.dir = $$ANDROID_NDK" > local.properties;
+	echo "ndk.dir = $$ANDROID_NDK" > local.properties
 
 $(OPENAL_TIMESTAMP) : openal_download
 	@LAST_MODIF=$$(find ${OPENAL_DIR} -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ");\
