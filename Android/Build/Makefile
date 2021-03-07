@@ -76,13 +76,6 @@ VORBIS_TIMESTAMP = $(VORBIS_DIR)/timestamp
 VORBIS_TIMESTAMP_INT = $(ANDR_ROOT)/deps/vorbis_timestamp
 VORBIS_URL_GIT = https://github.com/MoNTE48/libvorbis-android
 
-IRRLICHT_BRANCH = ogl-es
-IRRLICHT_DIR = $(ANDR_ROOT)/deps/irrlicht
-IRRLICHT_LIB = $(IRRLICHT_DIR)/lib/Android/libIrrlicht.a
-IRRLICHT_TIMESTAMP = $(IRRLICHT_DIR)/timestamp
-IRRLICHT_TIMESTAMP_INT = $(ANDR_ROOT)/deps/irrlicht_timestamp
-IRRLICHT_URL_HTTP = https://github.com/MoNTE48/Irrlicht/archive/$(IRRLICHT_BRANCH).zip
-
 MBEDTLS_VERSION = 2.16.5
 MBEDTLS_DIR = $(ANDR_ROOT)/deps/mbedtls
 MBEDTLS_LIB = $(MBEDTLS_DIR)/libmbedtls.a
@@ -375,61 +368,6 @@ iconv_download :
 clean_iconv :
 	$(RM) -r ${ICONV_DIR}
 
-irrlicht_download :
-	@if [ ! -d ${IRRLICHT_DIR} ] ; then									\
-		echo "irrlicht sources missing, downloading...";				\
-		mkdir -p ${ANDR_ROOT}/deps;										\
-		cd deps;														\
-		wget ${IRRLICHT_URL_HTTP} || exit 1;							\
-		unzip -q ${IRRLICHT_BRANCH}.zip || exit 1;						\
-		$(RM) -r ${IRRLICHT_BRANCH}.zip;								\
-		mv Irrlicht-${IRRLICHT_BRANCH} irrlicht;						\
-		cd irrlicht;													\
-		mkdir -p lib/Android;											\
-	fi
-
-$(IRRLICHT_TIMESTAMP) : irrlicht_download
-	@LAST_MODIF=$$(find ${IRRLICHT_DIR} -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ");\
-	if [ $$(basename $$LAST_MODIF) != "timestamp" ] ; then				\
-		touch ${IRRLICHT_TIMESTAMP};									\
-	fi
-
-irrlicht : $(IRRLICHT_LIB)
-
-$(IRRLICHT_LIB): $(IRRLICHT_TIMESTAMP)
-	+@REFRESH=0;														\
-	if [ ! -e ${IRRLICHT_TIMESTAMP_INT} ] ; then						\
-		REFRESH=1;														\
-	fi;																	\
-	if [ ! -e ${IRRLICHT_LIB} ] ; then									\
-		REFRESH=1;														\
-	fi;																	\
-	if [ ${IRRLICHT_TIMESTAMP} -nt ${IRRLICHT_TIMESTAMP_INT} ] ; then	\
-		REFRESH=1;														\
-	fi;																	\
-	if [ $$REFRESH -ne 0 ] ; then										\
-	echo "changed timestamp for irrlicht detected building...";			\
-	cd ${IRRLICHT_DIR}/source/Irrlicht/Android;							\
-	export APP_PLATFORM=android-${API};									\
-	export TARGET_ABI=${TARGET_ABI};									\
-	${ANDROID_NDK}/ndk-build											\
-		NDEBUG=1														\
-		APP_PLATFORM=android-${API}										\
-		TARGET_ABI=${TARGET_ABI}										\
-		APP_STL=${APP_STL}												\
-		COMPILER_VERSION=${COMPILER_VERSION}							\
-		TARGET_CPPFLAGS_ADDON="${TARGET_CXXFLAGS_ADDON}"				\
-		TARGET_CFLAGS_ADDON="${TARGET_CFLAGS_ADDON}"					\
-		NDK_APPLICATION_MK=${ANDR_ROOT}/Irrlicht.mk || exit 1;			\
-	touch ${IRRLICHT_TIMESTAMP};										\
-	touch ${IRRLICHT_TIMESTAMP_INT};									\
-	else																\
-		echo "nothing to be done for irrlicht";							\
-	fi
-
-clean_irrlicht :
-	$(RM) -r ${IRRLICHT_DIR}
-
 $(MBEDTLS_TIMESTAMP) : mbedtls_download
 	@LAST_MODIF=$$(find ${MBEDTLS_DIR} -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" "); \
 	if [ $$(basename $$LAST_MODIF) != "timestamp" ] ; then				\
@@ -604,7 +542,7 @@ $(LUAJIT_LIB) : $(LUAJIT_TIMESTAMP)
 clean_luajit :
 	$(RM) -r ${LUAJIT_DIR}
 
-deps : $(IRRLICHT_LIB) $(FREETYPE_LIB) $(CURL_LIB) $(LEVELDB_LIB)		\
+deps : $(FREETYPE_LIB) $(CURL_LIB) $(LEVELDB_LIB)		\
 	$(LUAJIT_LIB) $(OPENAL_LIB) $(VORBIS_LIB) $(MBEDTLS_LIB) iconv_download
 
 clean_all :

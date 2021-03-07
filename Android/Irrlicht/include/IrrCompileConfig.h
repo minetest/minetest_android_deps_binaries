@@ -5,6 +5,10 @@
 #ifndef __IRR_COMPILE_CONFIG_H_INCLUDED__
 #define __IRR_COMPILE_CONFIG_H_INCLUDED__
 
+//! Identifies Irrlicht fork customized for the Minetest engine
+#define IRRLICHT_VERSION_MT_REVISION 0
+#define IRRLICHT_VERSION_MT "mt0"
+
 //! Irrlicht SDK Version
 #define IRRLICHT_VERSION_MAJOR 1
 #define IRRLICHT_VERSION_MINOR 9
@@ -12,7 +16,7 @@
 // This flag will be defined only in SVN, the official release code will have
 // it undefined
 #define IRRLICHT_VERSION_SVN alpha
-#define IRRLICHT_SDK_VERSION "1.9.0"
+#define IRRLICHT_SDK_VERSION "1.9.0" IRRLICHT_VERSION_MT
 
 #include <stdio.h> // TODO: Although included elsewhere this is required at least for mingw
 
@@ -212,25 +216,36 @@ define out. */
 
 //! Define required options for OpenGL drivers.
 #if defined(_IRR_COMPILE_WITH_OPENGL_)
-#if defined(_IRR_COMPILE_WITH_WINDOWS_DEVICE_)
-#define _IRR_OPENGL_USE_EXTPOINTER_
-#define _IRR_COMPILE_WITH_WGL_MANAGER_
-#elif defined(_IRR_COMPILE_WITH_X11_DEVICE_)
-#define _IRR_OPENGL_USE_EXTPOINTER_
-#define _IRR_COMPILE_WITH_GLX_MANAGER_
-#elif defined(_IRR_COMPILE_WITH_OSX_DEVICE_)
-#define _IRR_COMPILE_WITH_NSOGL_MANAGER_
-#elif defined(_IRR_SOLARIS_PLATFORM_)
-#define _IRR_COMPILE_WITH_GLX_MANAGER_
-#endif
+	#if defined(_IRR_COMPILE_WITH_WINDOWS_DEVICE_)
+		#define _IRR_OPENGL_USE_EXTPOINTER_
+		#define _IRR_COMPILE_WITH_WGL_MANAGER_
+	#elif defined(_IRR_COMPILE_WITH_X11_DEVICE_)
+		#define _IRR_OPENGL_USE_EXTPOINTER_
+		#define _IRR_COMPILE_WITH_GLX_MANAGER_
+	#elif defined(_IRR_COMPILE_WITH_OSX_DEVICE_)
+		#define _IRR_COMPILE_WITH_NSOGL_MANAGER_
+	#elif defined(_IRR_SOLARIS_PLATFORM_)
+		#define _IRR_COMPILE_WITH_GLX_MANAGER_
+	#elif defined(_IRR_COMPILE_WITH_SDL_DEVICE_)
+		#define _IRR_OPENGL_USE_EXTPOINTER_
+	#endif
 #endif
 
 //! Define _IRR_COMPILE_WITH_OGLES1_ to compile the Irrlicht engine with OpenGL ES 1.1.
 /** If you do not wish the engine to be compiled with OpenGL ES 1.1, comment this
-define out. */
+define out.
+Depending on platform you may have to enable _IRR_OGLES1_USE_KHRONOS_API_HEADERS_ as well when using it.
+*/
+#if defined(_IRR_ANDROID_PLATFORM_) || defined(_IRR_IOS_PLATFORM_)
 #define _IRR_COMPILE_WITH_OGLES1_
+#endif
 #ifdef NO_IRR_COMPILE_WITH_OGLES1_
 #undef _IRR_COMPILE_WITH_OGLES1_
+#endif
+
+#ifdef _IRR_COMPILE_WITH_OGLES1_
+//! Define _IRR_OGLES1_USE_KHRONOS_API_HEADERS_ to use the OpenGL ES headers from the Debian Khronos-api package
+//#define _IRR_OGLES1_USE_KHRONOS_API_HEADERS_
 #endif
 
 //! Define required options for OpenGL ES 1.1 drivers.
@@ -250,14 +265,14 @@ define out. */
 //! Define _IRR_COMPILE_WITH_OGLES2_ to compile the Irrlicht engine with OpenGL ES 2.0.
 /** If you do not wish the engine to be compiled with OpenGL ES 2.0, comment this
 define out. */
-#define _IRR_COMPILE_WITH_OGLES2_
+//#define _IRR_COMPILE_WITH_OGLES2_
 #ifdef NO_IRR_COMPILE_WITH_OGLES2_
 #undef _IRR_COMPILE_WITH_OGLES2_
 #endif
 
 //! Define _IRR_COMPILE_WITH_WEBGL1_ to compile Irrlicht engine with a WebGL friendly
 //! subset of the OpenGL ES 2.0 driver.
-#define _IRR_COMPILE_WITH_WEBGL1_
+//#define _IRR_COMPILE_WITH_WEBGL1_
 #ifdef NO_IRR_COMPILE_WITH_WEBGL1_
 #undef _IRR_COMPILE_WITH_WEBGL1_
 #endif
@@ -278,6 +293,8 @@ define out. */
 #endif
 #endif
 #endif
+
+
 
 //! Define _IRR_COMPILE_WITH_SOFTWARE_ to compile the Irrlicht engine with software driver
 /** If you do not need the software driver, or want to use Burning's Video instead,
@@ -303,17 +320,21 @@ define out. */
 #undef _IRR_COMPILE_WITH_X11_
 #endif
 
-//! On some Linux systems the XF86 vidmode extension or X11 RandR are missing. Use these flags
-//! to remove the dependencies such that Irrlicht will compile on those systems, too.
-//! If you don't need colored cursors you can also disable the Xcursor extension
+//! On some Linux systems the XF86 vidmode extension, X11 RandR, or XInput2 are missing.
+//! Use these defines to add/remove support for those dependencies as needed.
+//! XInput2 (library called Xi) is currently only used to support touch-input.
 #if defined(_IRR_LINUX_PLATFORM_) && defined(_IRR_COMPILE_WITH_X11_)
 #define _IRR_LINUX_X11_VIDMODE_
 //#define _IRR_LINUX_X11_RANDR_
+//#define _IRR_LINUX_X11_XINPUT2_
 #ifdef NO_IRR_LINUX_X11_VIDMODE_
 #undef _IRR_LINUX_X11_VIDMODE_
 #endif
 #ifdef NO_IRR_LINUX_X11_RANDR_
 #undef _IRR_LINUX_X11_RANDR_
+#endif
+#ifdef NO_IRR_LINUX_X11_XINPUT2_
+#undef _IRR_LINUX_X11_XINPUT2_
 #endif
 
 //! X11 has by default only monochrome cursors, but using the Xcursor library we can also get color cursor support.
@@ -359,28 +380,12 @@ the engine will no longer read .jpeg images. */
 #undef _IRR_COMPILE_WITH_LIBJPEG_
 #endif
 
-//! Define _IRR_USE_NON_SYSTEM_JPEG_LIB_ to let irrlicht use the jpeglib which comes with irrlicht.
-/** If this is commented out, Irrlicht will try to compile using the jpeg lib installed in the system.
-	This is only used when _IRR_COMPILE_WITH_LIBJPEG_ is defined. */
-#define _IRR_USE_NON_SYSTEM_JPEG_LIB_
-#ifdef NO_IRR_USE_NON_SYSTEM_JPEG_LIB_
-#undef _IRR_USE_NON_SYSTEM_JPEG_LIB_
-#endif
-
 //! Define _IRR_COMPILE_WITH_LIBPNG_ to enable compiling the engine using libpng.
 /** This enables the engine to read png images. If you comment this out,
 the engine will no longer read .png images. */
 #define _IRR_COMPILE_WITH_LIBPNG_
 #ifdef NO_IRR_COMPILE_WITH_LIBPNG_
 #undef _IRR_COMPILE_WITH_LIBPNG_
-#endif
-
-//! Define _IRR_USE_NON_SYSTEM_LIBPNG_ to let irrlicht use the libpng which comes with irrlicht.
-/** If this is commented out, Irrlicht will try to compile using the libpng installed in the system.
-	This is only used when _IRR_COMPILE_WITH_LIBPNG_ is defined. */
-#define _IRR_USE_NON_SYSTEM_LIB_PNG_
-#ifdef NO_IRR_USE_NON_SYSTEM_LIB_PNG_
-#undef _IRR_USE_NON_SYSTEM_LIB_PNG_
 #endif
 
 //! Define _IRR_D3D_NO_SHADER_DEBUGGING to disable shader debugging in D3D9
@@ -770,42 +775,6 @@ ones. */
 #ifdef NO_IRR_COMPILE_WITH_ZLIB_
 #undef _IRR_COMPILE_WITH_ZLIB_
 #endif
-//! Define _IRR_USE_NON_SYSTEM_ZLIB_ to let irrlicht use the zlib which comes with irrlicht.
-/** If this is commented out, Irrlicht will try to compile using the zlib
-installed on the system. This is only used when _IRR_COMPILE_WITH_ZLIB_ is
-defined. */
-#define _IRR_USE_NON_SYSTEM_ZLIB_
-#ifdef NO_IRR_USE_NON_SYSTEM_ZLIB_
-#undef _IRR_USE_NON_SYSTEM_ZLIB_
-#endif
-//! Define _IRR_COMPILE_WITH_ZIP_ENCRYPTION_ if you want to read AES-encrypted ZIP archives
-#define _IRR_COMPILE_WITH_ZIP_ENCRYPTION_
-#ifdef NO_IRR_COMPILE_WITH_ZIP_ENCRYPTION_
-#undef _IRR_COMPILE_WITH_ZIP_ENCRYPTION_
-#endif
-//! Define _IRR_COMPILE_WITH_BZIP2_ if you want to support bzip2 compressed zip archives
-/** bzip2 is superior to the original zip file compression modes, but requires
-a certain amount of memory for decompression and adds several files to the
-library. */
-#define _IRR_COMPILE_WITH_BZIP2_
-#ifdef NO_IRR_COMPILE_WITH_BZIP2_
-#undef _IRR_COMPILE_WITH_BZIP2_
-#endif
-//! Define _IRR_USE_NON_SYSTEM_BZLIB_ to let irrlicht use the bzlib which comes with irrlicht.
-/** If this is commented out, Irrlicht will try to compile using the bzlib
-installed on the system. This is only used when _IRR_COMPILE_WITH_BZLIB_ is
-defined. */
-#define _IRR_USE_NON_SYSTEM_BZLIB_
-#ifdef NO_IRR_USE_NON_SYSTEM_BZLIB_
-#undef _IRR_USE_NON_SYSTEM_BZLIB_
-#endif
-//! Define _IRR_COMPILE_WITH_LZMA_ if you want to use LZMA compressed zip files.
-/** LZMA is a very efficient compression code, known from 7zip. Irrlicht
-currently only supports zip archives, though. */
-#define _IRR_COMPILE_WITH_LZMA_
-#ifdef NO_IRR_COMPILE_WITH_LZMA_
-#undef _IRR_COMPILE_WITH_LZMA_
-#endif
 #endif
 
 //! Define __IRR_COMPILE_WITH_MOUNT_ARCHIVE_LOADER_ if you want to mount folders as archives
@@ -906,9 +875,8 @@ precision will be lower but speed higher. currently X86 only
 #if defined(__BORLANDC__)
 	#include <tchar.h>
 
-	// Borland 5.5.1 does not have _strcmpi defined
+	// Borland 5.5.1
 	#if __BORLANDC__ == 0x551
-	//    #define _strcmpi strcmpi
 		#undef _tfinddata_t
 		#undef _tfindfirst
 		#undef _tfindnext
