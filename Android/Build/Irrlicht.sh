@@ -33,7 +33,7 @@ fi
 
 mkdir -p deps/libpng/$abi
 pushd deps/libpng/$abi
-../configure --host=${CC%-*}
+CFLAGS="-fPIC" ../configure --host=${CC%-*}
 make -j4 && make DESTDIR=$PWD install
 popd
 
@@ -52,7 +52,7 @@ libjpeg_a=$(echo "$PWD"/deps/libjpeg/$abi/opt/libjpeg-turbo/lib*/libjpeg.a)
 
 mkdir -p deps/irrlicht/$abi
 pushd deps/irrlicht/$abi
-cmake -S .. -B . -DBUILD_SHARED_LIBS=OFF \
+cmake -S .. -B . -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
 	-DCMAKE_TOOLCHAIN_FILE=$ndk/build/cmake/android.toolchain.cmake \
 	-DANDROID_ABI=$abi -DANDROID_NATIVE_API_LEVEL=$apilvl \
 	-DPNG_LIBRARY=$libpng_a \
@@ -61,7 +61,7 @@ cmake -S .. -B . -DBUILD_SHARED_LIBS=OFF \
 	-DJPEG_INCLUDE_DIR=$(dirname "$libjpeg_a")/../include
 make -j4
 
-if [ -n "$dest" ]; then
+if [ -d "$dest" ]; then
 	cp -fv lib/Android/libIrrlichtMt.a $dest/clang/$abi/
 	rm -rf $dest/include $dest/shaders
 	cp -a ../include $dest/include
