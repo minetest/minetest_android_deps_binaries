@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <wchar.h>
 
 namespace irr
 {
@@ -36,29 +37,12 @@ outside the string class for explicit use.
 template <typename T, typename TAlloc = irrAllocator<T> >
 class string;
 static size_t multibyteToWString(string<wchar_t>& destination, const char* source, u32 sourceSize);
-inline s32 isdigit(s32 c);
-
-enum eLocaleID
-{
-	IRR_LOCALE_ANSI = 0,
-	IRR_LOCALE_GERMAN = 1
-};
-
-static eLocaleID locale_current = IRR_LOCALE_ANSI;
-static inline void locale_set ( eLocaleID id )
-{
-	locale_current = id;
-}
+static size_t wStringToMultibyte(string<c8>& destination, const wchar_t* source, u32 sourceSize);
+inline bool isdigit(s32 c);
 
 //! Returns a character converted to lower case
 static inline u32 locale_lower ( u32 x )
 {
-	switch ( locale_current )
-	{
-		case IRR_LOCALE_GERMAN:
-		case IRR_LOCALE_ANSI:
-			break;
-	}
 	// ansi
 	return x >= 'A' && x <= 'Z' ? x + 0x20 : x;
 }
@@ -66,28 +50,9 @@ static inline u32 locale_lower ( u32 x )
 //! Returns a character converted to upper case
 static inline u32 locale_upper ( u32 x )
 {
-	switch ( locale_current )
-	{
-		case IRR_LOCALE_GERMAN:
-		case IRR_LOCALE_ANSI:
-			break;
-	}
-
 	// ansi
 	return x >= 'a' && x <= 'z' ? x + ( 'A' - 'a' ) : x;
 }
-
-//! Convert this utf-8-encoded string to the platform's wchar.
-/** The resulting string is always NULL-terminated and well-formed.
-\param len The size of the output buffer in bytes.
-*/
-IRRLICHT_API void utf8ToWchar(const char *in, wchar_t *out, const u64 len);
-
-//! Convert this wchar string to utf-8.
-/** The resulting string is always NULL-terminated and well-formed.
-\param len The size of the output buffer in bytes.
-*/
-IRRLICHT_API void wcharToUtf8(const wchar_t *in, char *out, const u64 len);
 
 
 template <typename T, typename TAlloc>
@@ -1424,6 +1389,7 @@ public:
 	}
 
 	friend size_t multibyteToWString(string<wchar_t>& destination, const char* source, u32 sourceSize);
+	friend size_t wStringToMultibyte(string<c8>& destination, const wchar_t* source, u32 sourceSize);
 
 private:
 
@@ -1494,6 +1460,53 @@ static size_t multibyteToWString(string<wchar_t>& destination, const char* sourc
 #pragma warning(disable: 4996)	// 'mbstowcs': This function or variable may be unsafe. Consider using mbstowcs_s instead.
 #endif
 		const size_t written = mbstowcs(destination.array, source, (size_t)sourceSize);
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
+		if ( written != (size_t)-1 )
+		{
+			destination.used = (u32)written+1;
+			destination.array[destination.used-1] = 0;
+		}
+		else
+		{
+			// Likely character which got converted until the invalid character was encountered are in destination now.
+			// And it seems even 0-terminated, but I found no documentation anywhere that this (the 0-termination) is guaranteed :-(
+			destination.clear();
+		}
+		return written;
+	}
+	else
+	{
+		destination.clear();
+		return 0;
+	}
+}
+
+//! Same as multibyteToWString, but the other way around
+static inline size_t wStringToMultibyte(string<c8>& destination, const core::string<wchar_t>& source)
+{
+	return wStringToMultibyte(destination, source.c_str(), (u32)source.size());
+}
+
+//! Same as multibyteToWString, but the other way around
+static inline size_t wStringToMultibyte(string<c8>& destination, const wchar_t* source)
+{
+	const u32 s = source ? (u32)wcslen(source) : 0;
+	return wStringToMultibyte(destination, source, s);
+}
+
+//! Same as multibyteToWString, but the other way around
+static size_t wStringToMultibyte(string<c8>& destination, const wchar_t* source, u32 sourceSize)
+{
+	if ( sourceSize )
+	{
+		destination.reserve(sourceSize+1);
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: 4996)	// 'wcstombs': This function or variable may be unsafe. Consider using wcstombs_s instead.
+#endif
+		const size_t written = wcstombs(destination.array, source, (size_t)sourceSize);
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
